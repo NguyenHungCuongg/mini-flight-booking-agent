@@ -177,8 +177,8 @@ Phạm vi: chỉ mẫu ReAct có tool ghi memory. Hai mẫu Plan-then-Execute v�
 ## 6. Demo với LLM thật
 
 <!-- HƯỚNG DẪN CHUNG (xoá comment này trước khi nộp):
-     1. Key OpenRouter cũ đã hết hạn 2026-10-21: tạo key mới, sửa OPENAI_API_KEY trong .env.
-     2. Mỗi session tốn khoảng 5 request (quota 50/ngày). S0..S4 tốn khoảng 25 request.
+     1. Demo dùng Gemini (gemini-3.8-flash) qua endpoint tương thích OpenAI; .env đã cấu hình sẵn.
+     2. Mỗi session tốn khoảng 5 request. S0..S4 tốn khoảng 25 request.
      3. Bắt đầu sạch:  uv run python -m flight_agent.memory_demo --reset
      4. Mỗi session là MỘT lệnh riêng:  uv run python -m flight_agent.memory_demo
         Tới dòng "Your request:" thì dán đúng câu ở bảng dưới. Khi được hỏi "Save preference ...? (y/n)" thì gõ y.
