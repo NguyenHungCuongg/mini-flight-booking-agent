@@ -107,7 +107,7 @@ Memory là một danh sách các mục trong `memory/preferences.json`. Mỗi m�
   "value": "11:00",
   "status": "active",
   "since": "2026-10-22T10:02:41",
-  "source": "Từ giờ tôi chỉ bay trước 11:00 ... Đặt cho tôi một vé SGN -> DAD ngày 2026-10-07.",
+  "source": "Từ giờ tôi chỉ bay trước 11:00 ... Đặt cho tôi một vé SGN -> DAD ngày 2026-10-07, chọn chuyến rẻ nhất.",
   "superseded_at": null
 }
 ```
@@ -239,13 +239,13 @@ Ràng buộc gốc của kịch bản này được để rất lỏng (không g
 
 | Session                 | Yêu cầu gõ vào                                                                                                | Mong đợi                                                             |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| S0 (đối chứng)          | `Đặt cho tôi một vé SGN -> DAD ngày 2026-10-07.`                                                              | Memory trống, đặt VJ610 (rẻ nhất) là hợp lệ                          |
-| S1 (thống nhất quy ước) | `Từ giờ tôi chỉ bay trước 11:00 và giá vé tối đa 2.000.000 VND. Đặt cho tôi một vé SGN -> DAD ngày 2026-10-07.` | Gọi `remember_preference` 2 lần (gõ y), đặt QH112                    |
-| S2 (Chứng minh 1)       | `Đặt cho tôi một vé SGN -> DAD ngày 2026-10-07.`                                                              | Memory inject có 11:00 và 2.000.000, đặt QH112, không đặt VJ610      |
-| S3 (đổi quy ước)        | `Từ giờ tôi chỉ bay trước 09:00. Đặt cho tôi một vé SGN -> DAD ngày 2026-10-07.`                               | Lưu 09:00, mục 11:00 thành `superseded`, đặt VN122                   |
-| S4 (Chứng minh 2)       | `Đặt cho tôi một vé SGN -> DAD ngày 2026-10-07.`                                                              | Memory inject chỉ có 09:00, đặt VN122                                |
+| S0 (đối chứng)          | `Đặt cho tôi một vé SGN -> DAD ngày 2026-10-07, chọn chuyến rẻ nhất.`                                                              | Memory trống, đặt VJ610 (rẻ nhất) là hợp lệ                          |
+| S1 (thống nhất quy ước) | `Từ giờ tôi chỉ bay trước 11:00 và giá vé tối đa 2.000.000 VND. Đặt cho tôi một vé SGN -> DAD ngày 2026-10-07, chọn chuyến rẻ nhất.` | Gọi `remember_preference` 2 lần (gõ y), đặt QH112                    |
+| S2 (Chứng minh 1)       | `Đặt cho tôi một vé SGN -> DAD ngày 2026-10-07, chọn chuyến rẻ nhất.`                                                              | Memory inject có 11:00 và 2.000.000, đặt QH112, không đặt VJ610      |
+| S3 (đổi quy ước)        | `Từ giờ tôi chỉ bay trước 09:00. Đặt cho tôi một vé SGN -> DAD ngày 2026-10-07, chọn chuyến rẻ nhất.`                               | Lưu 09:00, mục 11:00 thành `superseded`, đặt VN122                   |
+| S4 (Chứng minh 2)       | `Đặt cho tôi một vé SGN -> DAD ngày 2026-10-07, chọn chuyến rẻ nhất.`                                                              | Memory inject chỉ có 09:00, đặt VN122                                |
 
-Câu yêu cầu ở S2 và S4 giống hệt S0 và **không nhắc gì** đến giờ hay giá. Nếu kết quả khác S0 thì sự khác biệt chỉ có thể đến từ memory.
+Câu yêu cầu ở S2 và S4 giống hệt S0 và **không nhắc gì** đến giờ hay giá. Cụm "chọn chuyến rẻ nhất" có mặt trong mọi câu để model tự quyết định thay vì hỏi lại người dùng; nhờ vậy cũng thấy rõ memory làm thay đổi chuyến "rẻ nhất hợp lệ": VJ610 (không có quy ước), QH112 (trước 11:00), VN122 (trước 09:00). Nếu kết quả khác S0 thì sự khác biệt chỉ có thể đến từ memory.
 
 ### 6.1. Session đối chứng (S0)
 
