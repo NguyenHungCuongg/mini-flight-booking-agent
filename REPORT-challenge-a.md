@@ -7,7 +7,7 @@
 | Họ và tên | `Nguyễn Hùng Cường`                                     |
 | MSSV      | `23520201`                                              |
 | Lớp       | `SE373.R11`                                             |
-| Repo      | `https://github.com/NguyenHungCuongg/mini-flight-agent` |
+| Repo      | `https://github.com/NguyenHungCuongg/mini-flight-booking-agent` |
 
 ## Tổng quan
 
@@ -78,7 +78,7 @@ Với agent đặt vé, quy ước là **sở thích lâu dài của người d�
 | `depart_before` | Chỉ bay trước giờ này     | "Từ giờ tôi chỉ bay trước 11:00"        | `"11:00"`   |
 | `max_price`     | Giá vé tối đa (VND)       | "giá vé tối đa 2.000.000 VND"           | `2000000`   |
 
-Lý do chọn hai khoá này: chúng chính là hai trường của `Constraints` trong [flight_agent/core.py](https://github.com/NguyenHungCuongg/mini-flight-agent/blob/main/flight_agent/core.py). Ở BTVN#3, `Constraints` là dữ liệu mà harness dùng để **chặn bằng code** các booking vi phạm (`Harness.check_permission`) và để **kiểm tra hoàn thành** (`Harness.is_done`). Vì quy ước được đổ vào `Constraints`, nên nó không chỉ là một dòng nhắc trong prompt: dù model quên hay bị lừa, harness vẫn không cho đặt vé sai quy ước.
+Lý do chọn hai khoá này: chúng chính là hai trường của `Constraints` trong [flight_agent/core.py](https://github.com/NguyenHungCuongg/mini-flight-booking-agent/blob/main/flight_agent/core.py). Ở BTVN#3, `Constraints` là dữ liệu mà harness dùng để **chặn bằng code** các booking vi phạm (`Harness.check_permission`) và để **kiểm tra hoàn thành** (`Harness.is_done`). Vì quy ước được đổ vào `Constraints`, nên nó không chỉ là một dòng nhắc trong prompt: dù model quên hay bị lừa, harness vẫn không cho đặt vé sai quy ước.
 
 ## 3. State, History, Memory và Context trong agent
 
@@ -118,7 +118,7 @@ Memory là một danh sách các mục trong `memory/preferences.json`. Mỗi m�
 
 Lý do: theo bảng so sánh ở slide I.8, JSON/Markdown "dễ cài đặt, dễ đọc và kiểm tra bằng mắt", còn điểm yếu "khó tìm kiếm khi dữ liệu phình to" không áp dụng vì bài chỉ có vài mục. SQLite phải thiết kế schema và migration; vector retrieval tốn embedding và dễ gặp kết quả nhiễu (false matches). Cả hai đều thừa ở quy mô này. File JSON còn có lợi cho chính việc chứng minh: mở file ra là thấy đủ lịch sử thay đổi.
 
-`MemoryStore` nằm trong [flight_agent/memory.py](https://github.com/NguyenHungCuongg/mini-flight-agent/blob/main/flight_agent/memory.py), gồm các hàm:
+`MemoryStore` nằm trong [flight_agent/memory.py](https://github.com/NguyenHungCuongg/mini-flight-booking-agent/blob/main/flight_agent/memory.py), gồm các hàm:
 
 | Hàm                                  | Việc làm                                                                                   |
 | ------------------------------------ | ------------------------------------------------------------------------------------------ |
@@ -134,7 +134,7 @@ Lý do: theo bảng so sánh ở slide I.8, JSON/Markdown "dễ cài đặt, d�
 
 Bài dùng mẫu **memory tools** (slide I.7): agent ReAct có thêm tool `remember_preference(key, value)` và tự quyết định gọi khi người dùng nói một quy ước lâu dài ("từ giờ ..."). Cách này không cần thêm lần gọi LLM riêng để trích xuất quy ước từ hội thoại, nên không tốn thêm chi phí và độ trễ.
 
-Tool này **không** được đối xử đặc biệt: nó đi qua `Harness.execute()` như mọi tool khác, nên vẫn có phát hiện lặp, kiểm tra quyền và ghi vào trace. Code nằm trong [flight_agent/core.py](https://github.com/NguyenHungCuongg/mini-flight-agent/blob/main/flight_agent/core.py):
+Tool này **không** được đối xử đặc biệt: nó đi qua `Harness.execute()` như mọi tool khác, nên vẫn có phát hiện lặp, kiểm tra quyền và ghi vào trace. Code nằm trong [flight_agent/core.py](https://github.com/NguyenHungCuongg/mini-flight-booking-agent/blob/main/flight_agent/core.py):
 
 - `Harness.tools`: danh sách tool của `World`, cộng thêm `remember_preference` khi session có memory.
 - `Harness.check_permission`: trước khi ghi memory, hỏi người duyệt qua `approve_memory(key, value)`. Trong demo, `HumanApprover` hỏi `Save preference depart_before = 11:00 for future sessions? (y/n)`. Câu hỏi hiển thị giá trị **đã chuẩn hoá**, đúng giá trị sẽ được lưu (gõ `9:00` thì hỏi `09:00`). Giá trị không hợp lệ thì không hỏi, tool trả thẳng `invalid_param`. Trả lời `n` thì kết quả là `denied` và file không đổi.
@@ -144,7 +144,7 @@ Vì sao phải có bước xác nhận: memory tồn tại lâu hơn một lần
 
 ### 4.3. Khi nào nạp: toàn bộ memory, ngay lúc mở session
 
-Memory rất nhỏ (tối đa hai mục `active`), nên bài nạp **toàn bộ** ngay khi mở session, không cần tìm kiếm. Như slide I.2 lưu ý, memory nằm trên đĩa không tự xuất hiện trong context: harness phải truy xuất (retrieval) rồi tiêm vào ngữ cảnh (injection). Việc nạp làm hai chỗ, trong `run()` của [flight_agent/run.py](https://github.com/NguyenHungCuongg/mini-flight-agent/blob/main/flight_agent/run.py) và trong `run_react` của [flight_agent/react.py](https://github.com/NguyenHungCuongg/mini-flight-agent/blob/main/flight_agent/react.py):
+Memory rất nhỏ (tối đa hai mục `active`), nên bài nạp **toàn bộ** ngay khi mở session, không cần tìm kiếm. Như slide I.2 lưu ý, memory nằm trên đĩa không tự xuất hiện trong context: harness phải truy xuất (retrieval) rồi tiêm vào ngữ cảnh (injection). Việc nạp làm hai chỗ, trong `run()` của [flight_agent/run.py](https://github.com/NguyenHungCuongg/mini-flight-booking-agent/blob/main/flight_agent/run.py) và trong `run_react` của [flight_agent/react.py](https://github.com/NguyenHungCuongg/mini-flight-booking-agent/blob/main/flight_agent/react.py):
 
 1. **Vào dữ liệu ràng buộc:** `run()` gọi `memory.apply(scenario.constraints)` trước khi tạo `Harness`. Từ đây, kiểm tra quyền và kiểm tra hoàn thành đều dùng quy ước đã nhớ.
 2. **Vào context của model:** `Harness` lưu `memory.to_prompt()` vào `memory_prompt`, và `run_react` nối khối này vào cuối system prompt. Khối được inject có dạng:
@@ -185,7 +185,7 @@ Ví dụ file sau khi đổi giờ bay từ 11:00 sang 09:00 (rút gọn `source
 ### 4.5. Kiểm chứng: log phần memory đã inject
 
 - `RunResult` có thêm trường `memory_injected`, chứa đúng khối văn bản đã đưa vào context. Test dùng trường này để khẳng định memory thực sự có trong context.
-- Demo [flight_agent/memory_demo.py](https://github.com/NguyenHungCuongg/mini-flight-agent/blob/main/flight_agent/memory_demo.py) in khối memory **trước khi** gọi model, rồi in trace, kết quả và nội dung file memory sau session.
+- Demo [flight_agent/memory_demo.py](https://github.com/NguyenHungCuongg/mini-flight-booking-agent/blob/main/flight_agent/memory_demo.py) in khối memory **trước khi** gọi model, rồi in trace, kết quả và nội dung file memory sau session.
 
 ## 5. Luồng một session
 
@@ -297,7 +297,7 @@ Nhận xét: khối inject chỉ có `depart_before = 09:00`. Mục 11:00 vẫn 
 
 ## 7. Kiểm thử tự động
 
-Toàn bộ test chạy với model giả có kịch bản sẵn (`ScriptedModel` trong `tests/test_run.py`), không gọi mạng và không tốn quota. Test của bài nằm trong [tests/test_memory.py](https://github.com/NguyenHungCuongg/mini-flight-agent/blob/main/tests/test_memory.py):
+Toàn bộ test chạy với model giả có kịch bản sẵn (`ScriptedModel` trong `tests/test_run.py`), không gọi mạng và không tốn quota. Test của bài nằm trong [tests/test_memory.py](https://github.com/NguyenHungCuongg/mini-flight-booking-agent/blob/main/tests/test_memory.py):
 
 | Test                                                                 | Chứng minh điều gì                                                                    |
 | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
@@ -337,7 +337,7 @@ Agent đặt vé đã nhớ được quy ước của người dùng qua nhiều
 ## Phụ lục: chạy lại
 
 ```bash
-git clone https://github.com/NguyenHungCuongg/mini-flight-agent && cd mini-flight-agent
+git clone https://github.com/NguyenHungCuongg/mini-flight-booking-agent && cd mini-flight-booking-agent
 uv sync
 uv run pytest -q                                      # 52 test, model giả, không cần key
 cp .env.example .env                                  # rồi điền OPENAI_API_KEY
