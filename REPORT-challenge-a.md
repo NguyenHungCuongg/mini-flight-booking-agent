@@ -1,15 +1,52 @@
-# Báo cáo Challenge A: Persistent Memory cho agent đặt vé máy bay
+# Báo cáo BTVN#4: Persistent Memory cho agent đặt vé máy bay
 
 |           |                                                         |
 | --------- | ------------------------------------------------------- |
 | Môn học   | SE373: Kỹ thuật xây dựng hệ thống Agentic AI            |
-| Bài       | Challenge A: Persistent Memory (Buổi 7)                 |
+| Bài       | BTVN#4: Challenge A, Persistent Memory (Buổi 7)         |
 | Họ và tên | `Nguyễn Hùng Cường`                                     |
 | MSSV      | `23520201`                                              |
 | Lớp       | `SE373.R11`                                             |
 | Repo      | `https://github.com/NguyenHungCuongg/mini-flight-agent` |
 
-Bài này dùng lại agent đặt vé của BTVN#3 (xem `REPORT.md`) và bổ sung bộ nhớ dài hạn. Mã nguồn đầy đủ nằm trong repo; báo cáo chỉ dẫn link tới từng file và hàm liên quan.
+## Tổng quan
+
+### Agent được chọn: agent đặt vé máy bay của BTVN#3
+
+Đề Challenge A cho phép "tái sử dụng agent đã có". Bài này dùng lại **agent đặt vé máy bay** em đã xây dựng ở BTVN#3, cùng repo ở trên. Tóm tắt agent đó:
+
+- **Nhiệm vụ:** người dùng nhờ đặt một vé máy bay theo yêu cầu, ví dụ "SGN đi DAD ngày 2026-10-07, bay trước 12:00, giá không quá 2.000.000 VND". Agent tìm chuyến, kiểm tra ghế, giữ chỗ, thanh toán, rồi đọc lại booking để xác nhận.
+- **Công nghệ:** Python, LangChain (`create_agent` cùng middleware). Model là LLM thật qua API tương thích OpenAI; bài này dùng Gemini `gemini-3.8-flash`.
+- **Công cụ (tool):** 5 tool giả lập với dữ liệu cố định, gồm `search_flights`, `check_seat`, `book_seat`, `pay`, `get_booking`. Không có hệ thống bán vé thật nào bị gọi.
+- **Kiến trúc `Agent = Model + Harness`:** model chỉ *đề xuất* lời gọi tool. Harness là phần code bao quanh model, quyết định lời gọi đó có được chạy hay không, và tự kiểm tra bằng code xem việc đặt vé đã thật sự xong chưa. Harness gồm:
+  - Ràng buộc của người dùng được lưu thành dữ liệu (`Constraints`).
+  - Kiểm quyền trước mỗi tool: chặn đặt vé sai ràng buộc, hỏi người duyệt khi thanh toán vượt hạn mức.
+  - Kiểm tra hoàn thành bằng cách đọc lại booking.
+  - Gói bàn giao cho người khi agent phải dừng.
+  - Thêm ngân sách số lần gọi model và phát hiện lặp.
+- **Ba mẫu thiết kế:** ReAct, Plan-then-Execute và Lai. Cả ba chạy trên cùng harness và được đánh giá trên 8 kịch bản (xem `REPORT.md`).
+
+### Vì sao agent này hợp với Challenge A
+
+Ở BTVN#3, mỗi lần chạy là độc lập: người dùng phải nhắc lại đầy đủ "bay trước 12:00, giá tối đa 2 triệu" trong mọi yêu cầu. Trong khi đó, một người hay đi máy bay thường có **thói quen cố định**, ví dụ "tôi chỉ bay buổi sáng" hay "không mua vé quá 2 triệu". Đó chính là "quy ước" mà đề yêu cầu agent phải nhớ: người dùng nói một lần, agent áp dụng cho các lần đặt vé sau, và cập nhật khi người dùng đổi ý.
+
+Agent này còn có sẵn một điểm thuận lợi: ràng buộc vốn đã là dữ liệu mà harness dùng để chặn bằng code. Vì vậy quy ước lấy từ memory không chỉ được "nhắc" cho model trong prompt, mà còn được harness **cưỡng chế**. Nếu model quên hoặc bị lừa, harness vẫn không cho đặt vé sai quy ước.
+
+### Bài này bổ sung những gì
+
+| Thành phần mới                  | Vai trò                                                                                          |
+| ------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `flight_agent/memory.py`        | Kho memory (`MemoryStore`): lưu quy ước vào `memory/preferences.json`, đánh dấu bản cũ khi quy ước đổi |
+| Tool `remember_preference`      | Agent ReAct tự gọi để lưu quy ước khi người dùng nói "từ giờ ...", có người dùng xác nhận          |
+| Thay đổi trong `run()`          | Mở session mới thì nạp quy ước vào cả context của model lẫn ràng buộc của harness                 |
+| `flight_agent/memory_demo.py`   | Demo: mỗi lần chạy là một session mới, in ra phần memory đã inject                               |
+| `tests/test_memory.py`          | 25 test tự động, gồm test cho Chứng minh 1 và Chứng minh 2                                        |
+
+Toàn bộ phần của BTVN#3 vẫn giữ nguyên: 26 test cũ pass mà không phải sửa, và khi chạy không có memory thì agent hoạt động y hệt trước.
+
+### Cấu trúc báo cáo
+
+Mục 1 nêu yêu cầu của đề. Mục 2 và 3 định nghĩa "quy ước" và các khái niệm State, History, Memory, Context trong agent này. Mục 4 và 5 trình bày thiết kế theo năm câu gợi ý của đề. Mục 6 là demo với LLM thật, gồm hai chứng minh. Mục 7 là kiểm thử tự động. Mục 8 và 9 là hạn chế và kết luận. Mã nguồn đầy đủ nằm trong repo; báo cáo chỉ dẫn link tới từng file và hàm liên quan.
 
 ## 1. Yêu cầu bài
 
@@ -95,7 +132,7 @@ Lý do: theo bảng so sánh ở slide I.8, JSON/Markdown "dễ cài đặt, d�
 
 ### 4.2. Ai ghi: agent gọi tool, người dùng xác nhận
 
-Bài dùng mẫu **memory tools** (slide I.7): agent ReAct có thêm tool `remember_preference(key, value)` và tự quyết định gọi khi người dùng nói một quy ước lâu dài ("từ giờ ..."). Cách này không cần thêm lần gọi LLM để trích xuất, điều quan trọng khi quota chỉ có 50 request/ngày.
+Bài dùng mẫu **memory tools** (slide I.7): agent ReAct có thêm tool `remember_preference(key, value)` và tự quyết định gọi khi người dùng nói một quy ước lâu dài ("từ giờ ..."). Cách này không cần thêm lần gọi LLM riêng để trích xuất quy ước từ hội thoại, nên không tốn thêm chi phí và độ trễ.
 
 Tool này **không** được đối xử đặc biệt: nó đi qua `Harness.execute()` như mọi tool khác, nên vẫn có phát hiện lặp, kiểm quyền và ghi vào trace. Code nằm trong [flight_agent/core.py](https://github.com/NguyenHungCuongg/mini-flight-agent/blob/main/flight_agent/core.py):
 
