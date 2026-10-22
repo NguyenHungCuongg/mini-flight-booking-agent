@@ -16,7 +16,7 @@
 Đề Challenge A cho phép "tái sử dụng agent đã có". Bài này dùng lại **agent đặt vé máy bay** em đã xây dựng ở BTVN#3, cùng repo ở trên. Tóm tắt agent đó:
 
 - **Nhiệm vụ:** người dùng nhờ đặt một vé máy bay theo yêu cầu, ví dụ "SGN đi DAD ngày 2026-10-07, bay trước 12:00, giá không quá 2.000.000 VND". Agent tìm chuyến, kiểm tra ghế, giữ chỗ, thanh toán, rồi đọc lại booking để xác nhận.
-- **Công nghệ:** Python, LangChain (`create_agent` cùng middleware). Model là LLM thật qua API tương thích OpenAI; bài này dùng Gemini `gemini-3.8-flash`.
+- **Công nghệ:** Python, LangChain (`create_agent` cùng middleware). Model là LLM thật qua API tương thích OpenAI; bài này dùng Gemini `gemini-3.5-flash`.
 - **Công cụ (tool):** 5 tool giả lập với dữ liệu cố định, gồm `search_flights`, `check_seat`, `book_seat`, `pay`, `get_booking`. Không có hệ thống bán vé thật nào bị gọi.
 - **Kiến trúc `Agent = Model + Harness`:** model chỉ *đề xuất* lời gọi tool. Harness là phần code bao quanh model, quyết định lời gọi đó có được chạy hay không, và tự kiểm tra bằng code xem việc đặt vé đã thật sự xong chưa. Harness gồm:
   - Ràng buộc của người dùng được lưu thành dữ liệu (`Constraints`).
@@ -214,7 +214,7 @@ Phạm vi: chỉ mẫu ReAct có tool ghi memory. Hai mẫu Plan-then-Execute v�
 ## 6. Demo với LLM thật
 
 <!-- HƯỚNG DẪN CHUNG (xoá comment này trước khi nộp):
-     1. Demo dùng Gemini (gemini-3.8-flash) qua endpoint tương thích OpenAI; .env đã cấu hình sẵn.
+     1. Demo dùng Gemini (gemini-3.5-flash) qua endpoint tương thích OpenAI; .env đã cấu hình sẵn.
      2. Mỗi session tốn khoảng 5 request. S0..S4 tốn khoảng 25 request.
      3. Bắt đầu sạch:  uv run python -m flight_agent.memory_demo --reset
      4. Mỗi session là MỘT lệnh riêng:  uv run python -m flight_agent.memory_demo
