@@ -2,7 +2,7 @@
 
 ![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-3776ab)
 ![LangChain](https://img.shields.io/badge/LangChain-1.4-1c3c3c)
-![Tests: 26 offline](https://img.shields.io/badge/tests-26%20offline-brightgreen)
+![Tests: 46 offline](https://img.shields.io/badge/tests-46%20offline-brightgreen)
 
 A flight booking agent built with **LangChain** for SE373 (Agentic AI Systems Engineering, UIT),
 wrapped in a **harness**: the Python code around the model that decides whether a tool call may
@@ -158,7 +158,7 @@ calls the network:
 
 ```bash
 uv sync
-uv run pytest -q                 # 26 tests
+uv run pytest -q                 # 46 tests
 uv run pytest -q -k hybrid       # one group
 ```
 
@@ -199,10 +199,14 @@ flight_agent/
 ├── hybrid.py         Hybrid: Plan-then-Execute that replans on a failed step
 ├── model.py          ChatOpenAI configured from .env
 ├── demo.py           interactive demo with a human approver
-└── evaluate.py       resumable evaluation, writes results/
+├── evaluate.py       resumable evaluation, writes results/
+├── memory.py         Challenge A: MemoryStore (preferences across sessions)
+└── memory_demo.py    Challenge A: one session per run, prints the injected memory
 tests/test_run.py     26 offline tests through run() with a scripted model
+tests/test_memory.py  20 offline tests for Challenge A
 results/              runs.jsonl (every run with its trace) and summary.md
 REPORT.md             lab report (Vietnamese)
+REPORT-challenge-a.md Challenge A report: persistent memory (Vietnamese)
 CONTEXT.md            glossary (Vietnamese)
 ```
 
@@ -228,6 +232,21 @@ Scenario("my_case", "Short description.",
 * **Tests assert only on `RunResult`.** They drive the real LangChain loop with a scripted model,
   so they cover branches the real model rarely takes: blocked bookings, loops, the budget,
   rejected plans, and a model that claims success without paying.
+
+## Challenge A: persistent memory
+
+The agent remembers the user's booking preferences (`depart_before`, `max_price`) across sessions
+in `memory/preferences.json`. A changed preference marks the old entry `superseded` instead of
+deleting it. At session start the active preferences are overlaid on `Constraints`, so the harness
+enforces them, and injected into the ReAct system prompt. ReAct saves new ones with the
+`remember_preference` tool, which asks the user to confirm. Each command below is a new session:
+
+```bash
+uv run python -m flight_agent.memory_demo --reset   # forget everything
+uv run python -m flight_agent.memory_demo           # one session
+```
+
+Details and proofs: [REPORT-challenge-a.md](REPORT-challenge-a.md).
 
 ## References
 

@@ -17,6 +17,10 @@ _Avoid_: framework, wrapper
 Yêu cầu của người dùng (tuyến bay, ngày, giờ khởi hành tối đa, giá tối đa), lưu thành dữ liệu để prompt được sinh ra từ nó và code kiểm tra theo nó.
 _Avoid_: yêu cầu, điều kiện
 
+**Quy ước** (Preference):
+Sở thích lâu dài của người dùng (giờ khởi hành tối đa, giá tối đa) lưu trong memory qua nhiều session, được đè lên Ràng buộc khi mở session. Khi đổi, bản cũ được đánh dấu thay thế (superseded), không bị xoá.
+_Avoid_: setting, cấu hình
+
 **Tiêu chí hoàn thành**:
 Quy tắc kiểm bằng code, đọc lại booking từ hệ thống: có booking đã thanh toán và thoả mọi ràng buộc. Lời model nói "xong rồi" không bao giờ được tính.
 _Avoid_: model báo xong
