@@ -67,7 +67,7 @@ Mức độ hoàn thành:
 | Quy ước đổi: bản cũ thành `superseded`    | Xong                                | `MemoryStore.remember`                                        |
 | Log phần memory đã inject                 | Xong                                | `RunResult.memory_injected`, `flight_agent/memory_demo.py`    |
 | Chứng minh 1 và 2                         | Test tự động: xong; demo LLM thật: mục 6 | `tests/test_memory.py`, mục 6                            |
-| Không làm hỏng BTVN#3                     | 26 test cũ vẫn pass, tổng 51 test   | `uv run pytest -q`                                            |
+| Không làm hỏng BTVN#3                     | 26 test cũ vẫn pass, tổng 52 test   | `uv run pytest -q`                                            |
 
 ## 2. "Quy ước" trong bài này
 
@@ -315,11 +315,11 @@ Toàn bộ test chạy với model giả có kịch bản sẵn (`ScriptedModel`
 | `test_saving_a_preference_needs_the_users_yes`                       | Người dùng từ chối thì tool trả `denied`, file không đổi (chống memory poisoning)       |
 | `test_the_user_confirms_the_value_that_will_be_stored_and_is_not_asked_about_invalid_ones` | Người dùng được hỏi đúng giá trị sẽ lưu (`09:00`), không bị hỏi về giá trị sai (`9h`) |
 
-Kết quả: 51 test pass, gồm 26 test cũ của BTVN#3 (không phải sửa test nào) và 25 test mới.
+Kết quả: 52 test pass, gồm 26 test cũ của BTVN#3 (không phải sửa test nào), 25 test memory mới ở trên, và 1 test mới trong `tests/test_run.py` kiểm tra lỗi hết quota của Gemini được tính là `infra_error`.
 
 > 📸 **Ảnh 5: kết quả `uv run pytest -q`**
 <!-- CHỤP: chạy  uv run pytest -q -v tests/test_memory.py  (thấy tên từng test PASSED),
-     rồi  uv run pytest -q  (thấy "51 passed"). Lưu: docs-img/a-05-tests.png -->
+     rồi  uv run pytest -q  (thấy "52 passed"). Lưu: docs-img/a-05-tests.png -->
 
 ## 8. Hạn chế và hướng phát triển
 
@@ -339,7 +339,7 @@ Agent đặt vé đã nhớ được quy ước của người dùng qua nhiều
 ```bash
 git clone https://github.com/NguyenHungCuongg/mini-flight-agent && cd mini-flight-agent
 uv sync
-uv run pytest -q                                      # 51 test, model giả, không cần key
+uv run pytest -q                                      # 52 test, model giả, không cần key
 cp .env.example .env                                  # rồi điền OPENAI_API_KEY
 uv run python -m flight_agent.memory_demo --reset     # xoá memory, bắt đầu lại
 uv run python -m flight_agent.memory_demo             # một session; chạy lại lệnh này cho mỗi session
