@@ -250,3 +250,10 @@ def test_auth_errors_are_bugs_not_infra_errors():
     err = openai.AuthenticationError("401", response=httpx.Response(401, request=req), body=None)
     with pytest.raises(openai.AuthenticationError):
         go("react", "valid", err)
+
+
+def test_provider_agnostic_rate_limit_is_an_infra_error():
+    from langchain_core.exceptions import ModelRateLimitError      # what Gemini's client raises on 429
+    r = go("react", "valid", ModelRateLimitError("429 RESOURCE_EXHAUSTED"))
+    assert r.outcome == "infra_error"
+    assert "429" in r.error

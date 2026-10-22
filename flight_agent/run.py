@@ -3,6 +3,7 @@ import time
 from dataclasses import dataclass, field, replace
 
 import openai
+from langchain_core.exceptions import ModelAPIError, ModelConnectionError, ModelRateLimitError, ModelTimeoutError
 
 from flight_agent.core import Harness, StopRun
 from flight_agent.hybrid import run_hybrid
@@ -11,7 +12,9 @@ from flight_agent.react import run_react
 
 # Transient API errors are not the agent's fault. A bad key or model name (401/404) still crashes.
 INFRA_ERRORS = (openai.RateLimitError, openai.APITimeoutError, openai.APIConnectionError,
-                openai.InternalServerError)
+                openai.InternalServerError,
+                # provider-agnostic versions (what the Gemini client raises)
+                ModelRateLimitError, ModelTimeoutError, ModelConnectionError, ModelAPIError)
 
 PATTERNS = {"react": run_react, "plan_execute": run_plan_execute, "hybrid": run_hybrid}
 
