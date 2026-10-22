@@ -34,4 +34,4 @@ def run_react(harness, model, constraints):
     agent = create_agent(model=model, tools=harness.tools, system_prompt=system_prompt,
                          middleware=[budget, through_harness])
     out = agent.invoke({"messages": [{"role": "user", "content": harness.request}]})
-    return out["messages"][-1].content
+    return out["messages"][-1].text   # .text: Gemini returns a list of content blocks, not a string
