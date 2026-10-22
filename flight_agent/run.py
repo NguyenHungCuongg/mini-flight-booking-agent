@@ -1,6 +1,6 @@
 """The single entry point: run(pattern, scenario, model, approver) -> RunResult."""
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 import openai
 
@@ -30,10 +30,14 @@ class RunResult:
     seconds: float = 0.0
     final_answer: str = ""
     error: str = ""
+    memory_injected: str = ""   # Challenge A: the memory block that was put into the context
 
 
-def run(pattern, scenario, model, approver) -> RunResult:
-    harness = Harness(scenario, approver)
+def run(pattern, scenario, model, approver, *, memory=None, request=None) -> RunResult:
+    """One run = one session: fresh harness, fresh chat history. Only `memory` (a MemoryStore) survives."""
+    if memory:      # saved preferences become constraint DATA, so the harness enforces them
+        scenario = replace(scenario, constraints=memory.apply(scenario.constraints))
+    harness = Harness(scenario, approver, memory=memory, request=request or scenario.constraints.to_prompt())
     started = time.perf_counter()
     answer, error = "", ""
     try:
@@ -54,4 +58,5 @@ def run(pattern, scenario, model, approver) -> RunResult:
         pattern=pattern, scenario=scenario.name, outcome=outcome, expected=scenario.expected,
         stop_reason=harness.stop_reason, handoff=harness.handoff() if outcome == "handoff" else None,
         trace=harness.trace, model_calls=harness.model_calls, tokens=harness.tokens,
-        seconds=round(time.perf_counter() - started, 2), final_answer=str(answer), error=error)
+        seconds=round(time.perf_counter() - started, 2), final_answer=str(answer), error=error,
+        memory_injected=harness.memory_prompt)

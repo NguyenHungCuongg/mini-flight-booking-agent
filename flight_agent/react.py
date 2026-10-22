@@ -30,7 +30,8 @@ def run_react(harness, model, constraints):
         result = harness.execute(call["name"], call["args"])
         return ToolMessage(content=json.dumps(result), tool_call_id=call["id"])
 
-    agent = create_agent(model=model, tools=harness.world.tools, system_prompt=SYSTEM_PROMPT,
+    system_prompt = SYSTEM_PROMPT + (f"\n\n{harness.memory_prompt}" if harness.memory_prompt else "")
+    agent = create_agent(model=model, tools=harness.tools, system_prompt=system_prompt,
                          middleware=[budget, through_harness])
-    out = agent.invoke({"messages": [{"role": "user", "content": constraints.to_prompt()}]})
+    out = agent.invoke({"messages": [{"role": "user", "content": harness.request}]})
     return out["messages"][-1].content
