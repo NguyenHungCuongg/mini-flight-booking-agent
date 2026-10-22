@@ -47,7 +47,7 @@ def test_same_preference_twice_adds_no_entry(tmp_path):
 @pytest.mark.parametrize("key,raw,stored", [
     ("depart_before", "9:00", "09:00"), ("depart_before", "11:00", "11:00"),
     ("max_price", "2,000,000", 2_000_000), ("max_price", "2.000.000", 2_000_000),
-    ("max_price", 2_000_000, 2_000_000)])
+    ("max_price", 2_000_000, 2_000_000), ("max_price", 2_000_000.0, 2_000_000)])
 def test_values_are_normalised(tmp_path, key, raw, stored):
     s = store(tmp_path)
     assert s.remember(key, raw, source="s")["value"] == stored
@@ -55,7 +55,8 @@ def test_values_are_normalised(tmp_path, key, raw, stored):
 
 
 @pytest.mark.parametrize("key,raw", [("seat", "12A"), ("depart_before", "9h"), ("depart_before", "25:00"),
-                                     ("max_price", "abc"), ("max_price", -5)])
+                                     ("max_price", "abc"), ("max_price", -5), ("max_price", "2000000.0"),
+                                     ("max_price", "1.5"), ("max_price", "2,000,000.50")])
 def test_bad_preferences_are_rejected_and_not_written(tmp_path, key, raw):
     s = store(tmp_path)
     assert s.remember(key, raw, source="s")["status"] == "invalid_param"
@@ -130,3 +131,17 @@ def test_saving_a_preference_needs_the_users_yes(tmp_path):
                 AIMessage(content="ok"), approver=RefuseMemory())
     assert r.trace[0]["result"]["status"] == "denied"
     assert mem.entries() == []
+
+
+def test_the_user_confirms_the_value_that_will_be_stored_and_is_not_asked_about_invalid_ones(tmp_path):
+    asked = []
+
+    class Recorder(RuleApprover):
+        def approve_memory(self, key, value):
+            asked.append((key, value))
+            return True
+
+    session(store(tmp_path), call("remember_preference", key="depart_before", value="9h"),
+            call("remember_preference", key="depart_before", value="9:00"),
+            AIMessage(content="ok"), approver=Recorder())
+    assert asked == [("depart_before", "09:00")]

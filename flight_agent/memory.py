@@ -29,11 +29,11 @@ def _normalise(key: str, value):
         if not m or int(m[1]) > 23 or int(m[2]) > 59:
             return None, "depart_before must be a time HH:MM, e.g. 09:00."
         return f"{int(m[1]):02d}:{m[2]}", None      # zero-padded: Constraints.is_ok compares strings
-    try:
-        price = int(raw.replace(",", "").replace(".", "").replace("_", ""))
-    except ValueError:
-        price = 0
-    if price <= 0:
+    if isinstance(value, float) and value.is_integer():
+        raw = str(int(value))
+    # Digits, optionally grouped by thousands ("2,000,000", "2.000.000"). A decimal part is refused:
+    # stripping its "." would store "2000000.0" as 20,000,000.
+    if not re.fullmatch(r"\d{1,3}([.,_]\d{3})+|\d+", raw) or (price := int(re.sub(r"\D", "", raw))) <= 0:
         return None, "max_price must be a positive number of VND, e.g. 2000000."
     return price, None
 
@@ -49,6 +49,8 @@ class MemoryStore:
 
     def active(self) -> dict:
         return {e["key"]: e["value"] for e in self.entries() if e["status"] == "active"}
+
+    normalise = staticmethod(_normalise)
 
     def remember(self, key: str, value, source: str) -> dict:
         value, hint = _normalise(key, value)

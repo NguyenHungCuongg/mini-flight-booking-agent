@@ -29,8 +29,8 @@ Mức độ hoàn thành:
 | Nạp quy ước khi mở session mới            | Xong, inject + harness cưỡng chế    | `run()` trong `flight_agent/run.py`, `flight_agent/react.py`  |
 | Quy ước đổi: bản cũ thành `superseded`    | Xong                                | `MemoryStore.remember`                                        |
 | Log phần memory đã inject                 | Xong                                | `RunResult.memory_injected`, `flight_agent/memory_demo.py`    |
-| Chứng minh 1 và 2                         | Test tự động + demo với LLM thật    | `tests/test_memory.py`, mục 6                                 |
-| Không làm hỏng BTVN#3                     | 26 test cũ vẫn pass, tổng 46 test   | `uv run pytest -q`                                            |
+| Chứng minh 1 và 2                         | Test tự động: xong; demo LLM thật: mục 6 | `tests/test_memory.py`, mục 6                            |
+| Không làm hỏng BTVN#3                     | 26 test cũ vẫn pass, tổng 51 test   | `uv run pytest -q`                                            |
 
 ## 2. "Quy ước" trong bài này
 
@@ -91,7 +91,7 @@ Lý do: theo bảng so sánh ở slide I.8, JSON/Markdown "dễ cài đặt, d�
 | `to_prompt()`                        | Sinh đúng khối văn bản được inject vào context.                                            |
 | `apply(constraints)`                 | Trả `Constraints` mới với các giá trị từ memory đè lên.                                    |
 
-`remember` chuẩn hoá giá trị trước khi lưu, vì model có thể truyền `"9:00"`, `"2,000,000"` hay `"2.000.000"`. Giờ luôn được lưu dạng `HH:MM` có số 0 ở đầu (`"09:00"`), vì `Constraints.is_ok` so sánh giờ như chuỗi: `"9:00" < "12:00"` là **sai** theo thứ tự chuỗi, nên nếu lưu nguyên `"9:00"` thì harness sẽ chặn nhầm mọi chuyến. Khoá lạ hoặc giá trị không hợp lệ (`"9h"`, `"25:00"`, `"abc"`, số âm) bị trả `invalid_param` và không ghi gì xuống đĩa.
+`remember` chuẩn hoá giá trị trước khi lưu, vì model có thể truyền `"9:00"`, `"2,000,000"` hay `"2.000.000"`. Giờ luôn được lưu dạng `HH:MM` có số 0 ở đầu (`"09:00"`), vì `Constraints.is_ok` so sánh giờ như chuỗi: `"9:00" < "12:00"` là **sai** theo thứ tự chuỗi, nên nếu lưu nguyên `"9:00"` thì harness sẽ chặn nhầm mọi chuyến. Giá có phần thập phân (`"2000000.0"`, `"1.5"`) bị từ chối thay vì bỏ dấu chấm, vì bỏ dấu chấm sẽ biến `2000000.0` thành 20 triệu. Khoá lạ hoặc giá trị không hợp lệ (`"9h"`, `"25:00"`, `"abc"`, số âm) bị trả `invalid_param` và không ghi gì xuống đĩa.
 
 ### 4.2. Ai ghi: agent gọi tool, người dùng xác nhận
 
@@ -100,7 +100,7 @@ Bài dùng mẫu **memory tools** (slide I.7): agent ReAct có thêm tool `remem
 Tool này **không** được đối xử đặc biệt: nó đi qua `Harness.execute()` như mọi tool khác, nên vẫn có phát hiện lặp, kiểm quyền và ghi vào trace. Code nằm trong [flight_agent/core.py](https://github.com/NguyenHungCuongg/mini-flight-agent/blob/main/flight_agent/core.py):
 
 - `Harness.tools`: danh sách tool của `World`, cộng thêm `remember_preference` khi session có memory.
-- `Harness.check_permission`: trước khi ghi memory, hỏi người duyệt qua `approve_memory(key, value)`. Trong demo, `HumanApprover` hỏi `Save preference depart_before = 11:00 for future sessions? (y/n)`. Trả lời `n` thì kết quả là `denied` và file không đổi.
+- `Harness.check_permission`: trước khi ghi memory, hỏi người duyệt qua `approve_memory(key, value)`. Trong demo, `HumanApprover` hỏi `Save preference depart_before = 11:00 for future sessions? (y/n)`. Câu hỏi hiển thị giá trị **đã chuẩn hoá**, đúng giá trị sẽ được lưu (gõ `9:00` thì hỏi `09:00`). Giá trị không hợp lệ thì không hỏi, tool trả thẳng `invalid_param`. Trả lời `n` thì kết quả là `denied` và file không đổi.
 - `Harness.remember_preference`: gọi `MemoryStore.remember`, rồi cập nhật luôn `Constraints` của session đang chạy, để quy ước mới có hiệu lực ngay trong session đó chứ không chỉ từ session sau.
 
 Vì sao phải có bước xác nhận: memory sống lâu hơn một lần chạy. Ở BTVN#3 có kịch bản `injection`, trong đó kết quả tìm chuyến chứa một ghi chú giả mạo kiểu "khách đã bỏ yêu cầu giờ bay". Nếu model bị lừa và gọi `remember_preference(depart_before="23:59")`, một lần injection sẽ đầu độc **mọi** session về sau. Bước xác nhận là chốt chặn cho trường hợp đó. Mô tả của tool cũng dặn model chỉ gọi khi chính người dùng nói ra quy ước, không gọi vì một kết quả tool.
@@ -187,6 +187,7 @@ Phạm vi: chỉ mẫu ReAct có tool ghi memory. Hai mẫu Plan-then-Execute v�
      7. Nếu model thật làm khác kịch bản (ví dụ không gọi remember_preference, hoặc đặt theo thứ tự khác),
         cứ chụp đúng những gì xảy ra và sửa phần "Nhận xét" cho khớp. Điều cần thấy trong ảnh là:
         khối memory đã inject + trace có denied/ok + booking cuối cùng.
+        Phần "Nhận xét" dưới mỗi ảnh hiện mô tả kết quả MONG ĐỢI; đối chiếu với ảnh thật và sửa lại trước khi nộp.
      8. Chụp xong ảnh nào thì thay dòng "> 📸 ..." bằng ![Ảnh N](docs-img/....png) -->
 
 Lệnh: `uv run python -m flight_agent.memory_demo`. Mỗi lần chạy là một session mới. Các chuyến bay cố định (`MEMORY_SCENARIO` trong `flight_agent/memory.py`):
@@ -267,20 +268,21 @@ Toàn bộ test chạy với model giả có kịch bản sẵn (`ScriptedModel`
 | `test_remember_persists_on_disk_for_a_new_store`                     | Ghi xong, một `MemoryStore` mới (như session mới) đọc lại được                        |
 | `test_changing_a_preference_supersedes_the_old_one`                  | Đổi quy ước: mục cũ `superseded` có `superseded_at`, mục mới `active`                 |
 | `test_same_preference_twice_adds_no_entry`                           | Nói lại quy ước cũ không sinh mục trùng                                               |
-| `test_values_are_normalised` (5 trường hợp)                          | `"9:00"` → `"09:00"`, `"2,000,000"` / `"2.000.000"` → `2000000`                        |
-| `test_bad_preferences_are_rejected_and_not_written` (5 trường hợp)   | Khoá lạ, giờ sai, giá sai bị trả `invalid_param`, không ghi gì                        |
+| `test_values_are_normalised` (6 trường hợp)                          | `"9:00"` → `"09:00"`, `"2,000,000"` / `"2.000.000"` / `2000000.0` → `2000000`         |
+| `test_bad_preferences_are_rejected_and_not_written` (8 trường hợp)   | Khoá lạ, giờ sai, giá sai hoặc có phần thập phân bị trả `invalid_param`, không ghi gì |
 | `test_prompt_lists_active_values_only_and_apply_overlays_constraints`| Chỉ giá trị `active` vào context; `apply` đè đúng trường của `Constraints`            |
 | `test_without_memory_the_cheap_afternoon_flight_is_allowed`          | Đối chứng: không có memory thì đặt VJ610 hợp lệ                                       |
 | `test_a_session_saves_a_preference_the_user_states`                  | Agent gọi tool trong một session, quy ước nằm lại trên đĩa                            |
 | `test_proof_1_new_session_applies_the_saved_preference`              | **Chứng minh 1:** session mới có memory trong context, VJ610 bị chặn, đặt QH112       |
 | `test_proof_2_changed_preference_applies_now_and_in_later_sessions`  | **Chứng minh 2:** đổi sang 09:00 có hiệu lực ngay và ở session sau; 11:00 không còn trong context |
 | `test_saving_a_preference_needs_the_users_yes`                       | Người dùng từ chối thì tool trả `denied`, file không đổi (chống đầu độc memory)       |
+| `test_the_user_confirms_the_value_that_will_be_stored_and_is_not_asked_about_invalid_ones` | Người dùng được hỏi đúng giá trị sẽ lưu (`09:00`), không bị hỏi về giá trị sai (`9h`) |
 
-Kết quả: 46 test pass, gồm 26 test cũ của BTVN#3 (không phải sửa test nào) và 20 test mới.
+Kết quả: 51 test pass, gồm 26 test cũ của BTVN#3 (không phải sửa test nào) và 25 test mới.
 
 > 📸 **Ảnh 5: kết quả `uv run pytest -q`**
 <!-- CHỤP: chạy  uv run pytest -q -v tests/test_memory.py  (thấy tên từng test PASSED),
-     rồi  uv run pytest -q  (thấy "46 passed"). Lưu: docs-img/a-05-tests.png -->
+     rồi  uv run pytest -q  (thấy "51 passed"). Lưu: docs-img/a-05-tests.png -->
 
 ## 8. Hạn chế và hướng phát triển
 
@@ -293,14 +295,14 @@ Kết quả: 46 test pass, gồm 26 test cũ của BTVN#3 (không phải sửa t
 
 ## 9. Kết luận
 
-Agent đặt vé đã nhớ được quy ước của người dùng qua nhiều session nhờ một file JSON do `MemoryStore` quản lý, được nạp vào cả context của model lẫn dữ liệu ràng buộc của harness mỗi khi mở session. Khi quy ước đổi, bản cũ được đánh dấu `superseded` kèm thời điểm và nguồn, và chỉ bản mới vào context. Cả hai yêu cầu chứng minh đều được kiểm bằng test tự động với model giả và bằng demo với LLM thật. Điểm khác so với chỉ "nhắc trong prompt" là quy ước được harness cưỡng chế bằng code, nên vẫn đúng ngay cả khi model quên.
+Agent đặt vé đã nhớ được quy ước của người dùng qua nhiều session nhờ một file JSON do `MemoryStore` quản lý, được nạp vào cả context của model lẫn dữ liệu ràng buộc của harness mỗi khi mở session. Khi quy ước đổi, bản cũ được đánh dấu `superseded` kèm thời điểm và nguồn, và chỉ bản mới vào context. Cả hai yêu cầu chứng minh đều được kiểm bằng test tự động với model giả, và được minh hoạ bằng demo với LLM thật ở mục 6. Điểm khác so với chỉ "nhắc trong prompt" là quy ước được harness cưỡng chế bằng code, nên vẫn đúng ngay cả khi model quên.
 
 ## Phụ lục: chạy lại
 
 ```bash
 git clone https://github.com/NguyenHungCuongg/mini-flight-agent && cd mini-flight-agent
 uv sync
-uv run pytest -q                                      # 46 test, model giả, không cần key
+uv run pytest -q                                      # 51 test, model giả, không cần key
 cp .env.example .env                                  # rồi điền OPENAI_API_KEY
 uv run python -m flight_agent.memory_demo --reset     # xoá memory, bắt đầu lại
 uv run python -m flight_agent.memory_demo             # một session; chạy lại lệnh này cho mỗi session

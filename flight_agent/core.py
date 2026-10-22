@@ -255,8 +255,12 @@ class Harness:
         """Return None if allowed, or a reason if the call must be blocked."""
         if tool not in {t.__name__ for t in self.tools}:
             return f"Unknown tool {tool}."
-        if tool == "remember_preference" and not self.approver.approve_memory(args.get("key"), args.get("value")):
-            return "The user did not confirm saving this preference."
+        if tool == "remember_preference":
+            value, hint = self.memory.normalise(args.get("key"), args.get("value"))
+            # An invalid value is not asked about: the tool itself returns invalid_param.
+            # A valid one is shown to the user exactly as it will be stored.
+            if not hint and not self.approver.approve_memory(args.get("key"), value):
+                return "The user did not confirm saving this preference."
         c = self.scenario.constraints
         if tool == "book_seat":
             f = self.world._flight(args.get("flight"))

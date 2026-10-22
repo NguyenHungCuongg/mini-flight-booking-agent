@@ -2,7 +2,7 @@
 
 ![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-3776ab)
 ![LangChain](https://img.shields.io/badge/LangChain-1.4-1c3c3c)
-![Tests: 46 offline](https://img.shields.io/badge/tests-46%20offline-brightgreen)
+![Tests: 51 offline](https://img.shields.io/badge/tests-51%20offline-brightgreen)
 
 A flight booking agent built with **LangChain** for SE373 (Agentic AI Systems Engineering, UIT),
 wrapped in a **harness**: the Python code around the model that decides whether a tool call may
@@ -158,7 +158,7 @@ calls the network:
 
 ```bash
 uv sync
-uv run pytest -q                 # 46 tests
+uv run pytest -q                 # 51 tests
 uv run pytest -q -k hybrid       # one group
 ```
 
@@ -203,7 +203,7 @@ flight_agent/
 ├── memory.py         Challenge A: MemoryStore (preferences across sessions)
 └── memory_demo.py    Challenge A: one session per run, prints the injected memory
 tests/test_run.py     26 offline tests through run() with a scripted model
-tests/test_memory.py  20 offline tests for Challenge A
+tests/test_memory.py  25 offline tests for Challenge A
 results/              runs.jsonl (every run with its trace) and summary.md
 REPORT.md             lab report (Vietnamese)
 REPORT-challenge-a.md Challenge A report: persistent memory (Vietnamese)
